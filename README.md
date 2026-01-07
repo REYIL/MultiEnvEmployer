@@ -7,7 +7,7 @@
 
 [English](README.md) | [Русский](README_RU.md)
 
-**MultiEnvEmployer** — is a library for calling functions and generators from Python modules located in **other virtual environments**, including environments with **different Python versions** and **conflicting dependencies**.
+**MultiEnvEmployer** — a library for calling functions and generators from Python modules located in **other virtual environments**, including environments with **different Python versions** and **conflicting dependencies**.
 
 The library is intended for situations where code **cannot be physically imported**, but needs to be invoked and controlled from a single main process.
 
@@ -46,7 +46,7 @@ The library is intended for situations where code **cannot be physically importe
 
 ## Project Purpose
 
-The project solves the task of:
+The project solves the following tasks:
 
 * running Python code in an **isolated virtualenv**
 * calling functions as ordinary Python functions
