@@ -3,45 +3,38 @@
 ![Library Python](https://img.shields.io/badge/python_library-3.8%2B-blue.svg)&nbsp;
 ![Module Python](https://img.shields.io/badge/python_modules-3.5%2B-green.svg)&nbsp;
 
-
 # MultiEnvEmployer
 
 [English](README.md) | [Русский](README_RU.md)
 
-**MultiEnvEmployer** — библиотека для вызова функций и генераторов из Python-модулей, расположенных в **других виртуальных окружениях**, включая окружения с **разными версиями Python** и **конфликтующими зависимостями**.
+**MultiEnvEmployer** — библиотека для безопасного выполнения кода из разных виртуальных окружений Python как обычных функций.
 
-Библиотека предназначена для случаев, когда код **физически не может быть связан импортами**, но должен быть вызван и управляем из одного основного процесса.
+Выполняйте функции из изолированных окружений с разными версиями Python и конфликтующими зависимостями без конфликтов импорта или проблем с версиями.
 
 ---
 
 ## Содержание
 
-- [Назначение проекта](#назначение-проекта)
-- [Установка](#установка)
-- [Минимальный пример и инициализация](#минимальный-пример-и-инициализация)
-- [Основная концепция](#основная-концепция)
-- [Архитектура обмена данными](#архитектура-обмена-данными)
-- [Жизненный цикл вызова функции](#жизненный-цикл-вызова-функции)
-- [RESULT и URESULT — что это](#result-и-uresult---что-это)
-- - [RESULT](#result)
-- - [URESULT (streamed return)](#uresult-streamed-return)
-- [Поддерживаемые типы данных](#поддерживаемые-типы-данных)
-- - [Большие данные (через URESULT)](#большие-данные-через-uresult)
-- - [Малые данные](#малые-данные)
-- [Перехват print()](#перехват-print)
-- [Таймауты выполнения](#таймауты-выполнения)
-- - [none](#none)
-- - [absolute](#absolute)
-- - [progress](#progress)
-- - [Поведение watchdog и таймаутов](#поведение-watchdog-и-таймаутов)
-- [Кэширование](#кэширование)
-- [Структура проекта](#структура-проекта)
-- [Управление процессами](#управление-процессами)
-- [Обработка ошибок](#обработка-ошибок)
-- [Асинхронные функции внутри модуля](#асинхронные-функции-внутри-модуля)
-- [Что библиотека **не делает**](#что-библиотека-не-делает)
-- [Кратко](#кратко)
-- [Лицензия](#лицензия)
+* [Назначение проекта](#назначение-проекта)
+* [Установка](#установка)
+* [Быстрый старт](#быстрый-старт)
+* [Основные концепции](#основные-концепции)
+* [Справочник API](#справочник-api)
+  * [Employer](#employer)
+  * [RemoteModule](#remotemodule)
+  * [TimeoutPolicy](#timeoutpolicy)
+* [Возможности](#возможности)
+  * [Stateful vs Stateless](#stateful-vs-stateless)
+  * [Перехват print](#перехват-print)
+  * [Режимы таймаута](#режимы-таймаута)
+  * [Кэширование](#кэширование)
+  * [Генераторы](#генераторы)
+  * [Потоковая передача больших данных](#потоковая-передача-больших-данных)
+* [Обработка ошибок](#обработка-ошибок)
+* [Управление процессами](#управление-процессами)
+* [Продвинутое использование](#продвинутое-использование)
+* [Ограничения](#ограничения)
+* [Лицензия](#лицензия)
 
 ---
 
@@ -63,427 +56,490 @@
 
 ## Установка
 
-**Установка через репозиторий**
-
- ```bash
- git clone https://github.com/REYIL/MultiEnvEmployer.git
- cd MultiEnvEmployer
- ```
-
-**Установка через pip**
+**Установка через pip:**
 
 ```bash
 pip install multi-env-employer
 ```
 
----
+**Установка через репозиторий:**
 
-## Минимальный пример и инициализация
-
-1. **Минимальный пример**
-```python
-from MultiEnvEmployer import Employer, RemoteModule
-
-emp = Employer("/path/to/project", "/path/to/venv")
-moduleA = RemoteModule(emp, "moduleA")
-
-result = moduleA.add(2, 4)
-print(result)
+```bash
+git clone https://github.com/REYIL/MultiEnvEmployer.git
+cd MultiEnvEmployer
+pip install -e .
 ```
 
-2. **Инициализация Employer**
+---
+
+## Быстрый старт
+
+**Запуск демонстрации:**
+
+```bash
+python main.py
+```
+
+Демонстрирует все возможности библиотеки:
+- Инициализация Employer с настройками
+- Подключение модулей (stateless, stateful, cached)
+- Интроспекция функций
+- Базовые вызовы функций
+- Перехват print (terminal и logger)
+- Генераторы и async функции
+- Stateful поведение
+- Кэширование результатов
+- Различные типы данных
+- Потоковая передача больших данных
+- Режимы timeout
+- Обработка ошибок
+- Импорт между модулями
+- Управление процессами
+- Использование context manager
+
+**Запуск тестов:**
+
+```bash
+python test.py
+```
+
+Тесты проверяют всю функциональность и сохраняют результаты в `logs/test_results_py{version}.log`
+
+**Пример базового использования:**
+
+```python
+from pathlib import Path
+from MultiEnvEmployer import Employer, RemoteModule
+
+# Инициализация employer с целевым окружением
+emp = Employer(
+    project_dir=Path("path/to/modules"),
+    venv_path=Path("path/to/venv")
+)
+
+# Подключение к удалённому модулю
+module = RemoteModule(emp, "my_module")
+
+# Вызов функций как локальных
+result = module.add(2, 3)
+print(result)  # 5
+
+# Использование контекстного менеджера для автоматической очистки
+with Employer("path/to/modules", "path/to/venv") as emp:
+    module = RemoteModule(emp, "my_module")
+    result = module.process_data([1, 2, 3])
+```
+
+---
+
+## Основные концепции
+
+### Архитектура
+
+MultiEnvEmployer использует **процессную архитектуру**:
+
+1. **Главный процесс** (ваш код) создаёт `Employer`
+2. **Employer** запускает **Worker-процессы** в целевых виртуальных окружениях
+3. **Worker'ы** выполняют код и общаются через pickle-протокол
+4. Результаты возвращаются в главный процесс
+
+```mermaid
+graph LR
+    A[Главный процесс] -->|spawn| B[Worker-процесс]
+    B -->|pickle сообщения| A
+    A -->|вызов функции| B
+    B -->|result/yield/error| A
+```
+
+### Типы сообщений
+
+Коммуникация использует типизированные сообщения:
+
+| Тип | Описание |
+|------|-------------|
+| `RESULT` | Обычное возвращаемое значение функции |
+| `YIELD` | Значение yield генератора |
+| `URESULT` | Чанк больших данных (потоковая передача) |
+| `OUTPUT` | Перехваченный print() |
+| `DONE` | Выполнение завершено |
+| `ERROR` | Произошло исключение |
+
+---
+
+## Справочник API
+
+### Employer
+
+Основной класс для управления worker-процессами.
 
 ```python
 Employer(
-    project_dir: str,
-    venv_path: str,
+    project_dir: Path,
+    venv_path: Path,
+    cache_path: Path = None,
     pickle_protocol: int = 4
 )
 ```
 
 **Параметры:**
 
-* `project_dir`
-  Путь к директории проекта, в которой находятся Python-модули для выполнения.
+* `project_dir` - Директория с Python-модулями для выполнения
+* `venv_path` - Путь к виртуальному окружению для worker'ов
+* `cache_path` - Опциональная пользовательская директория кэша
+* `pickle_protocol` - Версия протокола pickle (по умолчанию: 4)
 
-* `venv_path`
-  Путь к виртуальному окружению, в котором будет запускаться worker.
+**Методы:**
 
-* `pickle_protocol`
-  Протокол сериализации, используемый для обмена данными между процессами.
+* `cache_clear()` - Очистить кэш результатов
+* `close(modules=None)` - Завершить процессы (все или конкретные)
+* `get_functions(module_name)` - Получить доступные функции в модуле
 
-  Используется для:
+**Контекстный менеджер:**
 
-  * аргументов функций
-  * возвращаемых значений (`RESULT`, `URESULT`)
-  * сообщений `yield`
-  * ошибок и служебных сообщений
+```python
+with Employer(project_dir, venv_path) as emp:
+    # Автоматическая очистка при выходе
+    pass
+```
 
-  Позволяет:
+---
 
-  * работать с разными версиями Python
-  * контролировать совместимость и размер сериализуемых данных
+### RemoteModule
 
-3. **Инициализация RemoteModule**
+Прокси для доступа к удалённому модулю.
 
 ```python
 RemoteModule(
     employer: Employer,
     module_name: str,
-    output: str = "terminal",
+    print_output: str = "terminal",
+    logger: logging.Logger = None,
+    stateful: bool = False,
     caching: bool = False,
-    timeout_seconds: int | None = None,
-    timeout_mode: str = "none"
+    timeout: TimeoutPolicy = None
 )
 ```
 
 **Параметры:**
 
-* `employer`
-  Экземпляр `Employer`, через который будет выполняться код.
+* `employer` - Экземпляр Employer
+* `module_name` - Имя модуля (без .py)
+* `print_output` - Режим вывода: `"terminal"`, `"logger"`, `"terminal|logger"`, `"none"`
+* `logger` - Экземпляр логгера (требуется, если режим вывода включает "logger")
+* `stateful` - Сохранять процесс между вызовами (по умолчанию: False)
+* `caching` - Включить кэширование результатов (по умолчанию: False)
+* `timeout` - Политика таймаута (по умолчанию: 60с в режиме progress)
 
-* `module_name`
-  Имя Python-модуля без расширения `.py`.
-  Модуль должен находиться в `project_dir`.
+**Свойства:**
 
-* `output`
-  Режим обработки `print()`:
-
-  * `"terminal"`
-  * `"logger"`
-  * `"terminal|logger"`
-  * `"none"`
-
-* `caching`
-  Включает или отключает файловое кэширование `RESULT`.
-
-  Важно:
-
-  * кэшируются только обычные `return`
-  * `yield` и `URESULT` не кэшируются
-
-* `timeout_seconds`
-  Максимальное время ожидания ответа.
-
-* `timeout_mode`
-  Режим таймаута:
-
-  * `"none"` - без ограничений
-  * `"absolute"` - жёсткий таймер
-  * `"progress"` - таймер сбрасывается при любом ответе (print, yield, return, error)
+* `__remote__.functions` - Словарь доступных функций с сигнатурами
 
 ---
 
-## Основная концепция
+### TimeoutPolicy
 
-В основном проекте вы инициализируете `Employer`, указывая:
-
-* путь к проекту с кодом
-* путь к virtualenv, в котором этот код должен выполняться
-
-Далее создаёте `RemoteModule` и вызываете функции так, будто они локальные:
+Конфигурация таймаутов выполнения.
 
 ```python
-res = moduleA.add(1, 2)
+from MultiEnvEmployer import TimeoutPolicy
+
+timeout = TimeoutPolicy(
+    seconds=60,
+    mode="progress"  # "none", "absolute", или "progress"
+)
 ```
 
-Фактически при этом:
+**Режимы:**
 
-* создаётся отдельный процесс Python
-* используется указанный virtualenv
-* код выполняется изолированно
-* результат возвращается в основной процесс
-
----
-
-## Архитектура обмена данными
-
-Обмен между основным процессом и worker’ом происходит через **единый бинарный канал** с использованием `pickle`.
-
-Каждое сообщение — это словарь фиксированного формата.
-
-### Типы сообщений
-
-| Тип       | Описание                                  |
-| --------- | ----------------------------------------- |
-| `RESULT`  | Обычное возвращаемое значение функции     |
-| `YIELD`   | Одно значение, отправленное через `yield` |
-| `URESULT` | Часть большого возвращаемого значения     |
-| `OUTPUT`  | Перехваченный `print()`                   |
-| `DONE`    | Завершение выполнения функции             |
-| `ERROR`   | Ошибка выполнения                         |
-
-> Пользователь **не работает напрямую** с этими сообщениями — они описаны для понимания поведения системы.
+* `none` - Без таймаута
+* `absolute` - Жёсткий лимит от начала функции
+* `progress` - Сброс таймера при любой активности (print, yield, return)
 
 ---
 
-## Жизненный цикл вызова функции
+## Возможности
 
-Ниже показан полный жизненный цикл одного вызова функции
-через `RemoteModule`, включая `yield`, потоковую передачу
-данных и обработку ошибок.
+### Stateful vs Stateless
 
-```mermaid
-sequenceDiagram
-    participant Main
-    participant Employer
-    participant Worker
+**Stateless (по умолчанию):**
+- Новый процесс для каждого вызова функции
+- Нет общего состояния между вызовами
+- Автоматическая очистка после выполнения
 
-    Main->>Employer: moduleA.func(*args, **kwargs)
-    Employer->>Worker: start process (venv)
-    Employer->>Worker: send CALL (pickle)
+```python
+module = RemoteModule(emp, "my_module", stateful=False)
+module.func1()  # Процесс A
+module.func2()  # Процесс B
+```
 
-    Worker->>Worker: import module
-    Worker->>Worker: execute function
+**Stateful:**
+- Единый процесс для всех вызовов
+- Общее состояние на уровне модуля
+- Требуется ручная очистка
 
-    loop execution
-        Worker-->>Employer: YIELD / URESULT
-        Employer-->>Main: return iterator / value
-    end
-
-    alt success
-        Worker-->>Employer: OUTPUT / RESULT / DONE
-        Employer-->>Main: return value
-    else error
-        Worker-->>Employer: ERROR
-        Employer-->>Main: raise RemoteExecutionError
-    end
+```python
+module = RemoteModule(emp, "my_module", stateful=True)
+module.set_value(10)  # Процесс A
+module.get_value()    # Процесс A (тот же процесс)
 ```
 
 ---
 
-## RESULT и URESULT - что это
+### Перехват print
 
-### RESULT
+Все вызовы `print()` в удалённых модулях перехватываются и перенаправляются:
 
-`RESULT` — это обычное возвращаемое значение функции (`return`).
+```python
+# Удалённый модуль
+def my_function():
+    print("Привет из worker'а")
+    return 42
 
-Используется для:
+# Главный процесс
+module = RemoteModule(emp, "my_module", print_output="terminal")
+result = module.my_function()
+# Вывод: Привет из worker'а
+```
 
-* малых данных
-* данных, которые можно целиком разместить в памяти
-
-### URESULT (streamed return)
-
-`URESULT` используется, когда функция возвращает **большие данные**.
-
-В этом случае:
-
-* данные **разбиваются на части**
-* каждая часть отправляется отдельно
-* после отправки часть **удаляется из памяти worker’а**
-* итоговый объект собирается на стороне Employer
-
-Для пользователя это выглядит как обычный `return`.
+**Режимы вывода:**
+- `"terminal"` - Вывод в stdout
+- `"logger"` - Отправка в логгер
+- `"terminal|logger"` - Оба варианта
+- `"none"` - Отбросить вывод
 
 ---
 
-## Поддерживаемые типы данных
+### Режимы таймаута
 
-### Малые данные
+**None:**
+```python
+timeout = TimeoutPolicy(seconds=60, mode="none")
+# Без таймаута, функция может выполняться бесконечно
+```
 
-Поддерживаются без ограничений:
+**Absolute:**
+```python
+timeout = TimeoutPolicy(seconds=30, mode="absolute")
+# Жёсткий лимит 30 секунд от начала
+```
 
-* `str`
-* `int`
-* `bool`
-* `list`
-* `tuple`
-* `set`
-* `dict`
-* `None`
-
-### Большие данные (через URESULT)
-
-Поддерживаются:
-
-* `str`
-* `list`
-* `tuple`
-* `numpy.ndarray`
-
-> Если данные признаны большими, библиотека автоматически использует потоковую передачу.
-
----
-
-## Перехват print()
-
-Все вызовы `print()` внутри удалённого модуля:
-
-* **не пишут напрямую в stdout**
-* **не ломают pickle-протокол**
-* перенаправляются в Employer
-
-Пользователь выбирает режим обработки:
-
-* `"terminal"` — вывод в терминал
-* `"logger"` — передача в логгер
-* `"terminal|logger"` — оба варианта
-* `"none"` — вывод полностью игнорируется
-
----
-
-## Таймауты выполнения
-
-Таймауты применяются **на уровне Employer**.
-
-Поддерживаются режимы:
-
-### `none`
-
-Без ограничений по времени.
-
-### `absolute`
-
-Жёсткий таймер с момента запуска функции.
-По истечении времени worker принудительно останавливается.
-
-### `progress`
-
-Таймер сбрасывается при **любом событии**:
-
-* `print`
-* `yield`
-* `URESULT`
-* `RESULT`
-* `ERROR`
-
-Если событий нет — выполнение считается зависшим.
-
-### Поведение watchdog и таймаутов
-
-Диаграмма ниже показывает, как Employer отслеживает активность
-worker-процесса и принимает решение о его остановке.
-
-```mermaid
-sequenceDiagram
-    Employer->>Worker: start execution
-    activate Worker
-
-    Worker-->>Employer: OUTPUT / YIELD / URESULT / RESULT / ERROR
-    Employer->>Employer: reset progress timer
-
-    alt timeout reached
-        Employer->>Worker: terminate process
-        Employer-->>Employer: cleanup resources
-        Employer-->>Main: raise RemoteTimeoutError
-    end
+**Progress:**
+```python
+timeout = TimeoutPolicy(seconds=10, mode="progress")
+# Допускается 10 секунд бездействия
+# Таймер сбрасывается при print/yield/return
 ```
 
 ---
 
-## Кэширование
+### Кэширование
 
-Кэширование реализовано **на стороне Employer** и хранится **в файловой системе**.
+Включите кэширование для сохранения результатов функций:
 
-Особенности:
+```python
+module = RemoteModule(emp, "my_module", caching=True)
 
-* кэшируются только `RESULT`
-* генераторы и yield-потоки не кэшируются
-* кэш общий для всех вызовов Employer
-* путь кэша определяется автоматически в системной директории пользователя
-
-Пример (Windows):
-
+result1 = module.expensive_function(x=10)  # Выполняется
+result2 = module.expensive_function(x=10)  # Из кэша
 ```
-C:\Users\<USER>\AppData\Local\MultiEnvEmployer\
+
+**Примечания:**
+- Кэшируются только `RESULT` (возвращаемые значения)
+- Генераторы и yield не кэшируются
+- Ключ кэша включает модуль, функцию, args и kwargs
+- Кэш файловый и персистентный
+
+---
+
+### Генераторы
+
+Генераторы работают прозрачно:
+
+```python
+# Удалённый модуль
+def count_to(n):
+    for i in range(n):
+        yield i
+
+# Главный процесс
+module = RemoteModule(emp, "my_module")
+for value in module.count_to(5):
+    print(value)  # 0, 1, 2, 3, 4
 ```
 
 ---
 
-## Структура проекта
+### Потоковая передача больших данных
+
+Большие возвращаемые значения автоматически передаются чанками:
+
+```python
+# Удалённый модуль
+def get_large_list():
+    return ["data"] * 10_000_000  # Автоматически передаётся потоком
+
+# Главный процесс
+module = RemoteModule(emp, "my_module")
+result = module.get_large_list()  # Получено чанками
+```
+
+**Поддерживаемые типы для потоковой передачи:**
+- `str`
+- `list`
+- `tuple`
+- `numpy.ndarray`
+
+**Порог:** 1 МБ (настраивается в worker)
+
+---
+
+## Обработка ошибок
+
+Все ошибки преобразуются в пользовательские исключения:
+
+```python
+from MultiEnvEmployer import errors
+
+try:
+    result = module.failing_function()
+except errors.RemoteExecutionError as e:
+    print(f"Удалённая ошибка: {e.error_type}")
+    print(f"Сообщение: {e.error_message}")
+    print(f"Traceback:\n{e.remote_traceback}")
+except errors.RemoteTimeoutError as e:
+    print(f"Таймаут после {e.timeout_seconds}с")
+except errors.WrongArgumentsError as e:
+    print(f"Неверные аргументы: {e.details}")
+```
+
+**Иерархия исключений:**
 
 ```
-MultiEnvEmployer
-├── employer
-│   ├── MessageReader.py      # Чтение и маршрутизация сообщений
-│   ├── OutputHandler.py      # Обработка print()
-│   ├── UReturnIterator.py    # Потоковая сборка RESULT
-│   ├── Watchdog.py           # Таймауты и контроль выполнения
-│   ├── YieldIterator.py      # Итерация по yield
-│   └── employer.py           # Управление worker-процессами
-│
-├── remote
-│   └── remote_module.py      # Пользовательский API
-│
-├── utils
-│   ├── CacheAppDirs.py       # Пути хранения кэша
-│   ├── FileCache.py          # Файловый кэш
-│   └── errors.py             # Кастомные исключения
-│
-├── worker
-│   ├── introspection.py      # Анализ функций и сигнатур
-│   └── worker.py             # Исполнение кода
-│
-└── __init__.py
+MultiEnvEmployerError
+├── RemoteError
+│   ├── RemoteExecutionError
+│   ├── RemoteTimeoutError
+│   ├── RemoteCloseFunction
+│   ├── RemoteCloseModule
+│   ├── TypeMessageNotFound
+│   ├── FailedIntrospectModule
+│   └── RemoteFunctionNotFound
+└── WrongArgumentsError
 ```
 
 ---
 
 ## Управление процессами
 
+**Закрыть конкретный модуль:**
 ```python
-emp.close()                           # остановить все процессы
-emp.close(moduleA.add)                # остановить конкретную функцию
-emp.close("moduleA.add")              # строковый вариант
-emp.close([moduleA.add, moduleA.tt])  # список функций
-emp.close(["moduleA.add", "moduleA.tt"])
+emp.close(module)
+emp.close("module_name")
+```
+
+**Закрыть конкретную функцию (stateless):**
+```python
+emp.close("module_name.function_name")
+```
+
+**Закрыть все процессы:**
+```python
+emp.close()
+```
+
+**Автоматическая очистка:**
+```python
+# Через контекстный менеджер
+with Employer(project_dir, venv_path) as emp:
+    pass  # Автоматическая очистка
+
+# Через atexit (регистрируется автоматически)
+emp = Employer(project_dir, venv_path)
+# Очистка при выходе из программы
 ```
 
 ---
 
-## Обработка ошибок
+## Продвинутое использование
 
-Все ошибки приводятся к кастомным исключениям:
+### Асинхронные функции
 
-* `WrongArgumentsError` — ошибка сигнатуры
-* `RemoteExecutionError` — ошибка внутри модуля
-* `RemoteTimeoutError` — таймаут
-* `RemoteCloseFunction` — принудительное завершение
-* `RemoteImportError` — ошибка импорта
-
-Пример:
+Асинхронные функции в удалённых модулях обрабатываются автоматически:
 
 ```python
-try:
-    moduleA.erorm()
-except errors.RemoteExecutionError as e:
-    print(e)
+# Удалённый модуль
+async def async_operation(x):
+    await asyncio.sleep(1)
+    return x * 2
+
+# Главный процесс (синхронный вызов)
+module = RemoteModule(emp, "my_module")
+result = module.async_operation(5)  # Возвращает 10
+```
+
+### Валидация сигнатуры
+
+Аргументы валидируются перед выполнением:
+
+```python
+# Удалённый модуль
+def add(a: int, b: int) -> int:
+    return a + b
+
+# Главный процесс
+module = RemoteModule(emp, "my_module")
+module.add(1, 2)      # OK
+module.add(1)         # Вызывает WrongArgumentsError
+module.add(1, 2, 3)   # Вызывает WrongArgumentsError
+```
+
+### Интроспекция
+
+Получить доступные функции:
+
+```python
+module = RemoteModule(emp, "my_module")
+functions = module.__remote__.functions
+
+for name, info in functions.items():
+    print(f"{name}{info['signature']}")
 ```
 
 ---
 
-## Асинхронные функции внутри модуля
+## Ограничения
 
-Если функция внутри модуля является `async`, она корректно исполняется внутри worker’а.
-Со стороны пользователя вызов остаётся синхронным.
+**Что библиотека НЕ делает:**
 
----
+* Не оптимизирует пользовательский код
+* Не анализирует алгоритмы
+* Не вмешивается в логику модуля
+* Не "исправляет" зависшие функции
 
-## Что библиотека **не делает**
+**Соображения безопасности:**
 
-* не оптимизирует пользовательский код
-* не анализирует алгоритмы
-* не вмешивается в логику модуля
-* не «лечит» зависшие функции
+* ⚠️ **КРИТИЧНО**: Библиотека использует pickle для межпроцессного взаимодействия. **Никогда не используйте с ненадёжными источниками данных**
+* Pickle может выполнять произвольный код при десериализации
+* Используйте MultiEnvEmployer только с кодом и данными, которые вы контролируете
+* Не подходит для обработки пользовательских данных или внешних входных данных
 
-Если код завис — он будет остановлен по таймауту или вручную.
+**Известные ограничения:**
 
----
-
-## Кратко
-
-MultiEnvEmployer — это инфраструктурный слой, который позволяет:
-
-* исполнять Python-код в других окружениях
-* управлять его выполнением
-* получать данные безопасно и контролируемо
-
-Без скрытой магии, без подмены поведения Python, с явным и контролируемым исполнением.
+* Применяются ограничения протокола pickle
+* Функции должны быть pickle-сериализуемыми
+* Нет общей памяти между процессами
+* Накладные расходы от создания процессов и IPC
 
 ---
 
 ## Лицензия
 
-Проект доступен под лицензией **[MIT License](LICENSE)** — свободно используйте, изменяйте и распространяйте.
+Проект доступен под **[лицензией MIT](LICENSE)** — свободен для использования, модификации и распространения.
 
+---
+
+## Контакты
+
+По вопросам и проблемам:
+- GitHub Issues: https://github.com/REYIL/MultiEnvEmployer/issues
+- Telegram: [@REYIL_DEV](https://t.me/REYIL_DEV)

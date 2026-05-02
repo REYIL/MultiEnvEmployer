@@ -2,7 +2,8 @@ import pickle
 
 from MultiEnvEmployer.utils.errors import (
     RemoteTimeoutError,
-    RemoteCloseFunction
+    RemoteCloseFunction,
+    RemoteCloseModule
 )
 
 
@@ -14,11 +15,15 @@ class MessageReader:
         self.module = module
         self.func = func
         self.dead_workers = dead_workers
+        self._finished = False
 
     def __iter__(self):
         return self
 
     def __next__(self):
+        if self._finished:
+            raise StopIteration
+
         try:
             while True:
                 msg = pickle.load(self.stdout_pipe)
@@ -27,8 +32,18 @@ class MessageReader:
                     continue
 
                 self.watchdog.poke()
+
+                # Остановить watchdog при завершении
+                if msg["type"] in ("DONE", "ERROR", "RESULT"):
+                    self._finished = True
+                    self.watchdog.stop()
+
                 return msg
+
         except EOFError:
+            self._finished = True
+            self.watchdog.stop()
+
             if self.watchdog.timed_out:
                 raise RemoteTimeoutError(
                     self.call_id,
@@ -38,8 +53,8 @@ class MessageReader:
                 )
             elif self.module + "." + self.func in self.dead_workers:
                 self.dead_workers.remove(self.module + "." + self.func)
-                raise RemoteCloseFunction(
-                    self.module,
-                    self.func
-                )
+                raise RemoteCloseFunction(self.module, self.func)
+            elif self.module in self.dead_workers:
+                self.dead_workers.remove(self.module)
+                raise RemoteCloseModule(self.module)
             raise

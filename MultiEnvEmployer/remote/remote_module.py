@@ -1,5 +1,8 @@
+from __future__ import annotations
 import inspect
 import logging
+from dataclasses import dataclass
+from typing import Optional
 
 from MultiEnvEmployer.utils.errors import (
     RemoteFunctionNotFound,
@@ -7,16 +10,24 @@ from MultiEnvEmployer.utils.errors import (
 )
 from MultiEnvEmployer.employer.OutputHandler import output_mods
 from MultiEnvEmployer.employer.Watchdog import timeout_mods
-from MultiEnvEmployer.employer.employer import Employer
 
 
-def _make_signature(sig_str: str) -> inspect.Signature:
+@dataclass
+class TimeoutPolicy:
+    seconds: int = 60
+    mode: timeout_mods = "progress"
+
+
+def _make_signature(sig_str: str) -> Optional[inspect.Signature]:
     """Создаём inspect.Signature из строки вида '(a, b=1, c: int=2)'."""
-    src = f"def _dummy{sig_str}: pass"
-    ns = {}
-    exec(src, ns)
-    func = ns["_dummy"]
-    return inspect.signature(func)
+    try:
+        src = f"def _dummy{sig_str}: pass"
+        ns = {}
+        exec(src, ns)
+        func = ns["_dummy"]
+        return inspect.signature(func)
+    except Exception:
+        return None
 
 
 class _RemoteMeta:
@@ -33,11 +44,11 @@ class RemoteFunction:
         "module",
         "name",
         "_employer",
-        "_type_output",
+        "_print_output",
+        "_stateful",
         "_logger",
         "_caching",
-        "_timeout_seconds",
-        "_timeout_mode",
+        "_timeout",
         "_signature",
     )
 
@@ -47,21 +58,21 @@ class RemoteFunction:
         module,
         name,
         signature,
-        type_output,
+        print_output,
+        stateful,
         logger,
         caching,
-        timeout_seconds,
-        timeout_mode,
+        timeout,
     ):
         self._employer = employer
         self.module = module
         self.name = name
         self._signature = signature
-        self._type_output = type_output
+        self._print_output = print_output
+        self._stateful = stateful
         self._logger = logger
         self._caching = caching
-        self._timeout_seconds = timeout_seconds
-        self._timeout_mode = timeout_mode
+        self._timeout = timeout or TimeoutPolicy()
 
     def __call__(self, *args, **kwargs):
         if self._signature:
@@ -77,17 +88,17 @@ class RemoteFunction:
         return self._employer.call_function(
             self.module,
             self.name,
-            self._type_output,
+            self._print_output,
+            self._stateful,
             self._logger,
             self._caching,
-            self._timeout_seconds,
-            self._timeout_mode,
+            self._timeout,
             *args,
             **kwargs
         )
 
     def __repr__(self):
-        return f"{self.module}.{self.name}"
+        return f"<RemoteFunction {self.module}.{self.name}>"
 
     def __str__(self):
         return f"{self.module}.{self.name}"
@@ -95,22 +106,22 @@ class RemoteFunction:
 
 class RemoteModule:
     def __init__(
-        self,
-        employer: Employer,
-        module_name: str,
-        type_output: output_mods = "terminal",
-        logger: logging.Logger = None,
-        caching: bool = False,
-        timeout_seconds: int = 60,
-        timeout_mode: timeout_mods = "progress"
-    ):
+            self,
+            employer: "Employer",
+            module_name: str,
+            print_output: output_mods = "terminal",
+            logger: logging.Logger = None,
+            stateful: bool = False,
+            caching: bool = False,
+            timeout: Optional[TimeoutPolicy] = None,
+        ):
         self._employer = employer
         self._module_name = module_name
-        self._type_output = type_output
-        self._logger = logger
+        self._print_output = print_output
+        self._stateful = stateful
         self._caching = caching
-        self._timeout_seconds = timeout_seconds
-        self._timeout_mode = timeout_mode
+        self._logger = logger
+        self._timeout = timeout or TimeoutPolicy()
 
         self._functions = self._employer.get_functions(self._module_name)
         self._signatures = self._build_signatures()
@@ -122,10 +133,7 @@ class RemoteModule:
     def _build_signatures(self):
         signatures = {}
         for name, meta in self._functions.items():
-            try:
-                signatures[name] = _make_signature(meta["signature"])
-            except Exception:
-                signatures[name] = None
+            signatures[name] = _make_signature(meta["signature"])
         return signatures
 
     def __getattr__(self, name):
@@ -137,12 +145,15 @@ class RemoteModule:
             module=self._module_name,
             name=name,
             signature=self._signatures.get(name),
-            type_output=self._type_output,
+            print_output=self._print_output,
+            stateful=self._stateful,
             logger=self._logger,
             caching=self._caching,
-            timeout_seconds=self._timeout_seconds,
-            timeout_mode=self._timeout_mode,
+            timeout=self._timeout,
         )
 
     def __repr__(self):
         return f"<RemoteModule {self._module_name}>"
+
+    def __str__(self):
+        return f"{self._module_name}"

@@ -1,53 +1,168 @@
+"""
+Тестовый модуль для демонстрации возможностей MultiEnvEmployer
+"""
 import time
+import asyncio
 from file2mod import modul112
 
 
+# =============================================================================
+# ПРОСТЫЕ ОПЕРАЦИИ
+# =============================================================================
 def add(a, b):
+    """Сложение двух чисел"""
     return a + b
 
 
 def multiply(a, b):
+    """Умножение двух чисел"""
     return a * b
 
 
-def stream_numbers(n):
-    for i in range(n):
-        time.sleep(0.3)
-        yield i
-
-
-def tt(n):
-    for i in range(n):
-        print("это из модуля функция tt: " + str(i))
-    return "tt сделал " + str(n) + " раз print"
-
-
 def non():
+    """Функция без return"""
     pass
 
 
-def typer(n: int):
+# =============================================================================
+# PRINT
+# =============================================================================
+def tt(n):
+    """Вызывает print n раз"""
+    for i in range(n):
+        print(f"Print iteration {i + 1}")
+
+
+# =============================================================================
+# ГЕНЕРАТОРЫ
+# =============================================================================
+def stream_numbers(n):
+    """Генератор чисел от 0 до n-1"""
+    for i in range(n):
+        yield i
+
+
+# =============================================================================
+# ASYNC ФУНКЦИИ
+# =============================================================================
+async def async_operation(x):
+    """Асинхронная операция"""
+    await asyncio.sleep(0.1)
+    return x * 2
+
+
+# =============================================================================
+# STATEFUL
+# =============================================================================
+_state = None
+
+
+def set_state(value):
+    """Сохраняет значение в модуле"""
+    global _state
+    _state = value
+
+
+def get_state():
+    """Возвращает сохраненное значение"""
+    return _state
+
+
+# =============================================================================
+# ТИПЫ ДАННЫХ
+# =============================================================================
+def typer(n):
+    """Возвращает разные типы данных"""
+    types_map = {
+        1: "string",
+        2: 123,
+        3: [1, 2, 3],
+        4: (1, 2, 3),
+        5: {1, 2, 3},
+        6: {"key": "value"},
+        7: True,
+        8: None
+    }
+    return types_map.get(n)
+
+
+# =============================================================================
+# БОЛЬШИЕ ДАННЫЕ
+# =============================================================================
+def giga_data(n):
+    """Генерирует большие объемы данных для тестирования streaming"""
     if n == 1:
-        return "1"              # str
+        # Большая строка
+        return "text" * 500000
     elif n == 2:
-        return 2                # int
+        # Большой список
+        return ["text"] * 500000
     elif n == 3:
-        return ["1"]            # list
-    elif n == 4:
-        return ("1",)           # tuple
-    elif n == 5:
-        return {"1"}            # set
-    elif n == 6:
-        return {"1": 1}         # dict
-    elif n == 7:
-        return True             # bool
-    elif n == 8:
-        return None             # NoneType
+        # Большой tuple
+        return ("text",) * 500000
     else:
-        raise ValueError("Неизвестный номер типа: " + str(n))
+        return None
 
 
-def giga_data(n: int):
+# =============================================================================
+# ОШИБКИ
+# =============================================================================
+def tafto(x, n=12, m=22):
+    """Функция для тестирования валидации аргументов"""
+    if not isinstance(x, int):
+        raise TypeError("x must be int")
+    return x + n + m
+
+
+def erorm():
+    """Генерирует ошибку"""
+    raise ValueError("бла бла бла")
+
+
+# =============================================================================
+# ИМПОРТ
+# =============================================================================
+def test_imp_file(a, b, c):
+    """Вызывает функцию из другого модуля"""
+    return modul112(a, b, c)
+
+
+# =============================================================================
+# LEGACY (для обратной совместимости)
+# =============================================================================
+def add_numbers(a, b):
+    """Устаревшая версия add()"""
+    return add(a, b)
+
+
+def multiply_numbers(a, b):
+    """Устаревшая версия multiply()"""
+    return multiply(a, b)
+
+
+def generate_numbers(n):
+    """Устаревшая версия stream_numbers()"""
+    return stream_numbers(n)
+
+
+def print_demo(n):
+    """Устаревшая версия tt()"""
+    tt(n)
+    return f"Printed {n} times"
+
+
+def no_return_function():
+    """Устаревшая версия non()"""
+    return non()
+
+
+def return_different_types(n):
+    """Устаревшая версия typer()"""
+    return typer(n)
+
+
+def generate_large_data(n):
+    """Устаревшая версия giga_data()"""
     if n == 1:
         return str(["text"] * 99999999)
     elif n == 2:
@@ -56,26 +171,32 @@ def giga_data(n: int):
         return ("text",) * 99999999
 
 
-def tafto(g, n=12, m: int = 22):
-    return n + m
+def example_signature_error(x, n=12, m=22):
+    """Устаревшая версия tafto()"""
+    return tafto(x, n, m)
 
 
-# def np_test():
-#     return np.__version__
+async def async_add(a, b):
+    """Устаревшая версия async_operation()"""
+    await asyncio.sleep(0.1)
+    return a + b
 
 
-async def async_test(a, b):
-    time.sleep(5)
-    return a+b
+def raise_error():
+    """Устаревшая версия erorm()"""
+    return erorm()
 
 
-def erorm():
-    raise TypeError("бла бла бла")
+def call_external_function(a, b, c):
+    """Устаревшая версия test_imp_file()"""
+    return test_imp_file(a, b, c)
 
 
-def test_imp_file(a, b, c):
-    return modul112(a, b, c)
+def save_value(data):
+    """Устаревшая версия set_state()"""
+    return set_state(data)
 
 
-def functions():
-    return "functions"
+def get_saved_value():
+    """Устаревшая версия get_state()"""
+    return get_state()

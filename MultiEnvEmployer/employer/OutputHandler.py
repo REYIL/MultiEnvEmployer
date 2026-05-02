@@ -7,7 +7,10 @@ output_mods = Literal["terminal", "logger", "terminal|logger", "none"]
 
 def output_handler(msg, type_output: output_mods = "terminal", logger=None):
     text = msg.get("payload", "")
-    if type_output == "terminal":
+    
+    if type_output == "none":
+        return
+    elif type_output == "terminal":
         print(text)
     elif type_output == "logger":
         if logger is None:

@@ -30,8 +30,3 @@ class CacheAppDirs:
     def user_cache_path(self) -> Path:
         return Path(self.user_cache_dir)
 
-
-dirser = CacheAppDirs("MultiEnvEmployer")
-
-print(dirser.user_cache_dir)
-

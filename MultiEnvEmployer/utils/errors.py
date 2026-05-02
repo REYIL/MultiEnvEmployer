@@ -86,6 +86,29 @@ class RemoteCloseFunction(RemoteError):
         super().__init__(message)
 
 
+class RemoteCloseModule(RemoteError):
+    """
+    Исключение выбрасывается, когда удаленный модуль
+    принудительно завершает своё выполнение.
+
+    Используется для информирования прокси и вызывающего кода,
+    что функция была прервана до завершения и дальнейшее
+    получение результата невозможно.
+    """
+
+    def __init__(self, module: Optional[str] = None, reason: Optional[str] = None):
+        self.module = module
+        self.reason = reason
+
+        message = "Remote function was closed before completion"
+        if module:
+            message += f" ({module})"
+        if reason:
+            message += f": {reason}"
+
+        super().__init__(message)
+
+
 class TypeMessageNotFound(RemoteError):
     """
     Исключение выбрасывается, когда от удалённого воркера
