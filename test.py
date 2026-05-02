@@ -1,5 +1,5 @@
 """
-Комплексные тесты для библиотеки MultiEnvEmployer
+Comprehensive tests for MultiEnvEmployer library
 """
 import logging
 import sys
@@ -8,7 +8,7 @@ from MultiEnvEmployer import Employer, RemoteModule, TimeoutPolicy, errors
 
 
 # =============================================================================
-# НАСТРОЙКА
+# CONFIGURATION
 # =============================================================================
 base_dir = Path(__file__).parent
 project_dir = base_dir / "example_project"
@@ -21,7 +21,7 @@ log_file = log_dir / f"test_results_py{version}.log"
 
 
 # =============================================================================
-# УТИЛИТЫ
+# UTILITIES
 # =============================================================================
 class TestLogger:
     def __init__(self, file_path):
@@ -62,9 +62,9 @@ class TestLogger:
         self.file.write(msg + "\n")
     
     def summary(self):
-        line = f"\n{'=' * 70}\nИТОГИ: {self.passed}/{self.total} тестов пройдено"
+        line = f"\n{'=' * 70}\nRESULTS: {self.passed}/{self.total} tests passed"
         if self.failed > 0:
-            line += f", {self.failed} провалено"
+            line += f", {self.failed} failed"
         line += f"\n{'=' * 70}\n"
         print(line)
         self.file.write(line + "\n")
@@ -83,19 +83,19 @@ class CountingHandler(logging.Handler):
 
 
 # =============================================================================
-# ТЕСТЫ
+# TESTS
 # =============================================================================
 def run_tests():
     log = TestLogger(log_file)
-    log.header(f"ТЕСТЫ MultiEnvEmployer (Python {sys.version})")
+    log.header(f"MultiEnvEmployer TESTS (Python {sys.version})")
     
     try:
         # ---------------------------------------------------------------------
-        # 1. ИНИЦИАЛИЗАЦИЯ
+        # 1. INITIALIZATION
         # ---------------------------------------------------------------------
-        log.header("1. ИНИЦИАЛИЗАЦИЯ")
+        log.header("1. INITIALIZATION")
         
-        log.test("Создание Employer")
+        log.test("Creating Employer")
         try:
             emp = Employer(
                 project_dir=project_dir,
@@ -104,12 +104,12 @@ def run_tests():
                 stream_threshold=1024 * 1024,
                 chunk_size=512 * 1024
             )
-            log.success("Employer создан")
+            log.success("Employer created")
         except Exception as e:
-            log.fail(f"Ошибка создания Employer: {e}")
+            log.fail(f"Employer creation error: {e}")
             return
         
-        log.test("Создание RemoteModule")
+        log.test("Creating RemoteModule")
         try:
             module = RemoteModule(
                 emp,
@@ -119,74 +119,74 @@ def run_tests():
                 caching=False,
                 timeout=TimeoutPolicy(seconds=60, mode="progress")
             )
-            log.success("RemoteModule создан")
+            log.success("RemoteModule created")
         except Exception as e:
-            log.fail(f"Ошибка создания RemoteModule: {e}")
+            log.fail(f"RemoteModule creation error: {e}")
             return
         
         # ---------------------------------------------------------------------
-        # 2. ИНТРОСПЕКЦИЯ
+        # 2. INTROSPECTION
         # ---------------------------------------------------------------------
-        log.header("2. ИНТРОСПЕКЦИЯ")
+        log.header("2. INTROSPECTION")
         
-        log.test("Получение списка функций")
+        log.test("Getting function list")
         try:
             functions = module.__remote__.functions
             if len(functions) > 0:
-                log.success(f"Найдено {len(functions)} функций")
+                log.success(f"Found {len(functions)} functions")
             else:
-                log.fail("Функции не найдены")
+                log.fail("No functions found")
         except Exception as e:
-            log.fail(f"Ошибка интроспекции: {e}")
+            log.fail(f"Introspection error: {e}")
         
         # ---------------------------------------------------------------------
-        # 3. БАЗОВЫЕ ВЫЗОВЫ
+        # 3. BASIC CALLS
         # ---------------------------------------------------------------------
-        log.header("3. БАЗОВЫЕ ВЫЗОВЫ")
+        log.header("3. BASIC CALLS")
         
-        log.test("Сложение: add(2, 4)")
+        log.test("Addition: add(2, 4)")
         try:
             result = module.add(2, 4)
             if result == 6:
                 log.success(f"2 + 4 = {result}")
             else:
-                log.fail(f"Ожидалось 6, получено {result}")
+                log.fail(f"Expected 6, got {result}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
-        log.test("Умножение: multiply(a=3, b=7)")
+        log.test("Multiplication: multiply(a=3, b=7)")
         try:
             result = module.multiply(a=3, b=7)
             if result == 21:
                 log.success(f"3 * 7 = {result}")
             else:
-                log.fail(f"Ожидалось 21, получено {result}")
+                log.fail(f"Expected 21, got {result}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
-        log.test("Функция без return: non()")
+        log.test("Function without return: non()")
         try:
             result = module.non()
             if result is None:
-                log.success("Вернул None")
+                log.success("Returned None")
             else:
-                log.fail(f"Ожидался None, получено {result}")
+                log.fail(f"Expected None, got {result}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 4. ПЕРЕХВАТ PRINT
+        # 4. PRINT INTERCEPTION
         # ---------------------------------------------------------------------
-        log.header("4. ПЕРЕХВАТ PRINT")
+        log.header("4. PRINT INTERCEPTION")
         
-        log.test("Print в terminal")
+        log.test("Print to terminal")
         try:
             module.tt(3)
-            log.success("Print перехвачен")
+            log.success("Print intercepted")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
-        log.test("Print в logger")
+        log.test("Print to logger")
         try:
             logger = logging.getLogger("test_logger")
             logger.setLevel(logging.INFO)
@@ -203,36 +203,36 @@ def run_tests():
             logger_module.tt(5)
             
             if handler.count == 5:
-                log.success(f"Logger получил {handler.count} сообщений")
+                log.success(f"Logger received {handler.count} messages")
             else:
-                log.fail(f"Ожидалось 5 сообщений, получено {handler.count}")
+                log.fail(f"Expected 5 messages, got {handler.count}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 5. ГЕНЕРАТОРЫ
+        # 5. GENERATORS
         # ---------------------------------------------------------------------
-        log.header("5. ГЕНЕРАТОРЫ")
+        log.header("5. GENERATORS")
         
-        log.test("Генератор: stream_numbers(5)")
+        log.test("Generator: stream_numbers(5)")
         try:
             count = 0
             for value in module.stream_numbers(5):
                 count += 1
             
             if count == 5:
-                log.success(f"Получено {count} значений")
+                log.success(f"Received {count} values")
             else:
-                log.fail(f"Ожидалось 5 значений, получено {count}")
+                log.fail(f"Expected 5 values, got {count}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 6. ТИПЫ ДАННЫХ
+        # 6. DATA TYPES
         # ---------------------------------------------------------------------
-        log.header("6. ТИПЫ ДАННЫХ")
+        log.header("6. DATA TYPES")
         
-        log.test("Проверка возврата разных типов")
+        log.test("Testing different return types")
         try:
             expected_types = {
                 1: str,
@@ -249,45 +249,45 @@ def run_tests():
             for n, expected_type in expected_types.items():
                 value = module.typer(n)
                 if not isinstance(value, expected_type):
-                    log.fail(f"typer({n}): ожидался {expected_type.__name__}, получен {type(value).__name__}")
+                    log.fail(f"typer({n}): expected {expected_type.__name__}, got {type(value).__name__}")
                     all_correct = False
             
             if all_correct:
-                log.success("Все типы корректны")
+                log.success("All types correct")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 7. БОЛЬШИЕ ДАННЫЕ
+        # 7. LARGE DATA
         # ---------------------------------------------------------------------
-        log.header("7. БОЛЬШИЕ ДАННЫЕ (STREAMING)")
+        log.header("7. LARGE DATA (STREAMING)")
         
-        log.test("Большая строка: giga_data(1)")
+        log.test("Large string: giga_data(1)")
         try:
             result = module.giga_data(1)
             if isinstance(result, str) and "text" in result:
-                log.success(f"Получена строка длиной {len(result)}")
+                log.success(f"Received string of length {len(result)}")
             else:
-                log.fail(f"Некорректный результат")
+                log.fail(f"Incorrect result")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
-        log.test("Большой список: giga_data(2)")
+        log.test("Large list: giga_data(2)")
         try:
             result = module.giga_data(2)
             if isinstance(result, list) and len(result) > 0:
-                log.success(f"Получен список из {len(result)} элементов")
+                log.success(f"Received list with {len(result)} elements")
             else:
-                log.fail(f"Некорректный результат")
+                log.fail(f"Incorrect result")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 8. STATEFUL ПОВЕДЕНИЕ
+        # 8. STATEFUL BEHAVIOR
         # ---------------------------------------------------------------------
-        log.header("8. STATEFUL ПОВЕДЕНИЕ")
+        log.header("8. STATEFUL BEHAVIOR")
         
-        log.test("Stateful модуль: сохранение состояния")
+        log.test("Stateful module: saving state")
         try:
             stateful_mod = RemoteModule(
                 emp,
@@ -299,30 +299,30 @@ def run_tests():
             result = stateful_mod.get_state()
             
             if result == 42:
-                log.success("Состояние сохранено")
+                log.success("State saved")
             else:
-                log.fail(f"Ожидалось 42, получено {result}")
+                log.fail(f"Expected 42, got {result}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
-        log.test("Stateful модуль: сброс после перезапуска")
+        log.test("Stateful module: reset after restart")
         try:
             emp.close(stateful_mod)
             result = stateful_mod.get_state()
             
             if result is None:
-                log.success("Состояние сброшено после перезапуска")
+                log.success("State reset after restart")
             else:
-                log.fail(f"Состояние не сброшено: {result}")
+                log.fail(f"State not reset: {result}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 9. КЭШИРОВАНИЕ
+        # 9. CACHING
         # ---------------------------------------------------------------------
-        log.header("9. КЭШИРОВАНИЕ")
+        log.header("9. CACHING")
         
-        log.test("Кэширование результатов")
+        log.test("Result caching")
         try:
             cached_mod = RemoteModule(
                 emp,
@@ -334,70 +334,70 @@ def run_tests():
             result2 = cached_mod.multiply(10, 20)
             
             if result1 == result2 == 200:
-                log.success("Кэширование работает")
+                log.success("Caching works")
             else:
-                log.fail(f"Результаты не совпадают: {result1} != {result2}")
+                log.fail(f"Results don't match: {result1} != {result2}")
             
             emp.cache_clear()
-            log.info("Кэш очищен")
+            log.info("Cache cleared")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 10. ОБРАБОТКА ОШИБОК
+        # 10. ERROR HANDLING
         # ---------------------------------------------------------------------
-        log.header("10. ОБРАБОТКА ОШИБОК")
+        log.header("10. ERROR HANDLING")
         
         log.test("WrongArgumentsError")
         try:
             module.tafto()
-            log.fail("Ошибка не выброшена")
+            log.fail("Error not raised")
         except errors.WrongArgumentsError:
-            log.success("WrongArgumentsError поймана")
+            log.success("WrongArgumentsError caught")
         except Exception as e:
-            log.fail(f"Неожиданная ошибка: {e}")
+            log.fail(f"Unexpected error: {e}")
         
         log.test("RemoteExecutionError")
         try:
             module.erorm()
-            log.fail("Ошибка не выброшена")
+            log.fail("Error not raised")
         except errors.RemoteExecutionError as e:
             if "бла бла бла" in str(e):
-                log.success("RemoteExecutionError поймана с корректным сообщением")
+                log.success("RemoteExecutionError caught with correct message")
             else:
-                log.fail("Сообщение ошибки некорректно")
+                log.fail("Error message incorrect")
         except Exception as e:
-            log.fail(f"Неожиданная ошибка: {e}")
+            log.fail(f"Unexpected error: {e}")
         
         log.test("RemoteCloseFunction/RemoteCloseModule")
         try:
-            # Создаем stateful модуль для теста закрытия
+            # Create stateful module for close test
             stateful_test = RemoteModule(emp, "moduleA", stateful=True)
             
-            # Запускаем функцию
+            # Run function
             result = stateful_test.add(1, 2)
             if result == 3:
-                log.info("Функция работает")
+                log.info("Function works")
             
-            # Закрываем модуль
+            # Close module
             emp.close(stateful_test)
-            log.info("Модуль закрыт")
+            log.info("Module closed")
             
-            # Попытка вызвать функцию снова - должен создаться новый процесс
+            # Try to call function again - should create new process
             result = stateful_test.add(5, 5)
             if result == 10:
-                log.success("Модуль перезапустился после закрытия")
+                log.success("Module restarted after close")
             else:
-                log.fail(f"Некорректный результат: {result}")
+                log.fail(f"Incorrect result: {result}")
         except Exception as e:
-            log.fail(f"Неожиданная ошибка: {type(e).__name__}: {e}")
+            log.fail(f"Unexpected error: {type(e).__name__}: {e}")
         
         # ---------------------------------------------------------------------
-        # 11. ИМПОРТ МЕЖДУ МОДУЛЯМИ
+        # 11. CROSS-MODULE IMPORTS
         # ---------------------------------------------------------------------
-        log.header("11. ИМПОРТ МЕЖДУ МОДУЛЯМИ")
+        log.header("11. CROSS-MODULE IMPORTS")
         
-        log.test("Вызов функции из другого модуля")
+        log.test("Calling function from another module")
         try:
             result1 = module.test_imp_file(1, 2, 2)
             
@@ -405,23 +405,23 @@ def run_tests():
             result2 = file2mod.modul112(1, 2, 2)
             
             if result1 == result2:
-                log.success(f"Результаты совпадают: {result1}")
+                log.success(f"Results match: {result1}")
             else:
-                log.fail(f"Результаты не совпадают: {result1} != {result2}")
+                log.fail(f"Results don't match: {result1} != {result2}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         # ---------------------------------------------------------------------
-        # 12. УПРАВЛЕНИЕ ПРОЦЕССАМИ
+        # 12. PROCESS MANAGEMENT
         # ---------------------------------------------------------------------
-        log.header("12. УПРАВЛЕНИЕ ПРОЦЕССАМИ")
+        log.header("12. PROCESS MANAGEMENT")
         
-        log.test("Закрытие всех процессов")
+        log.test("Closing all processes")
         try:
             emp.close()
-            log.success("Все процессы закрыты")
+            log.success("All processes closed")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
         log.test("Context manager")
         try:
@@ -429,14 +429,14 @@ def run_tests():
                 temp_mod = RemoteModule(temp_emp, "moduleA")
                 result = temp_mod.add(100, 200)
                 if result == 300:
-                    log.success("Context manager работает")
+                    log.success("Context manager works")
                 else:
-                    log.fail(f"Некорректный результат: {result}")
+                    log.fail(f"Incorrect result: {result}")
         except Exception as e:
-            log.fail(f"Ошибка: {e}")
+            log.fail(f"Error: {e}")
         
     except Exception as e:
-        log.fail(f"Критическая ошибка: {e}")
+        log.fail(f"Critical error: {e}")
         import traceback
         log.info(traceback.format_exc())
     
